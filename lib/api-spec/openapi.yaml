@@ -3,20 +3,30 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: RewardsRiver Cash API - FreeCash-style rewards platform for Malawi
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: users
+    description: User profile and balance
+  - name: offerwall
+    description: Offerwall integration
+  - name: withdrawals
+    description: Withdrawal operations
+  - name: leaderboard
+    description: Leaderboard
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +34,476 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/me/balance:
+    get:
+      operationId: getBalance
+      tags: [users]
+      summary: Get current user's points balance
+      responses:
+        "200":
+          description: Balance info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Balance"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/me/stats:
+    get:
+      operationId: getUserStats
+      tags: [users]
+      summary: Get user statistics (total earned, withdrawn, rank)
+      responses:
+        "200":
+          description: User stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserStats"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/me/transactions:
+    get:
+      operationId: getTransactions
+      tags: [users]
+      summary: List user's point transactions
+      responses:
+        "200":
+          description: Transactions list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Transaction"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /offerwall/token:
+    get:
+      operationId: getOfferwallToken
+      tags: [offerwall]
+      summary: Get a signed token to embed the RewardsRiver offerwall
+      responses:
+        "200":
+          description: Offerwall embed URL and token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferwallToken"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /offerwall/postback:
+    get:
+      operationId: offerwallPostback
+      tags: [offerwall]
+      summary: RewardsRiver postback endpoint (HMAC-verified, called by RewardsRiver servers)
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: amount
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: offer_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: offer_name
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: sig
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: transaction_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK - postback accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid signature or duplicate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /withdrawals:
+    get:
+      operationId: getWithdrawals
+      tags: [withdrawals]
+      summary: List user's withdrawal requests
+      responses:
+        "200":
+          description: Withdrawals list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Withdrawal"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: requestWithdrawal
+      tags: [withdrawals]
+      summary: Request a withdrawal via mobile money
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WithdrawalInput"
+      responses:
+        "201":
+          description: Withdrawal initiated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Withdrawal"
+        "400":
+          description: Insufficient balance or validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /leaderboard:
+    get:
+      operationId: getLeaderboard
+      tags: [leaderboard]
+      summary: Get top earners leaderboard
+      responses:
+        "200":
+          description: Leaderboard entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaderboardEntry"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    RegisterInput:
+      type: object
+      required: [email, password, username, phone]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        username:
+          type: string
+          minLength: 3
+          maxLength: 30
+        phone:
+          type: string
+          description: Malawi mobile number (e.g. +2650999123456)
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    User:
+      type: object
+      required: [id, email, username, createdAt]
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        username:
+          type: string
+        phone:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    AuthResponse:
+      type: object
+      required: [user, token]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+
+    Balance:
+      type: object
+      required: [points, pointsValueMwk]
+      properties:
+        points:
+          type: integer
+          description: Points balance (100 points = 1 MWK)
+        pointsValueMwk:
+          type: number
+          description: Value in Malawian Kwacha
+
+    UserStats:
+      type: object
+      required: [totalEarned, totalWithdrawn, currentBalance, rank, offersCompleted]
+      properties:
+        totalEarned:
+          type: integer
+        totalWithdrawn:
+          type: number
+        currentBalance:
+          type: integer
+        rank:
+          type: ["integer", "null"]
+        offersCompleted:
+          type: integer
+
+    Transaction:
+      type: object
+      required: [id, type, points, description, createdAt]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [earn, withdraw]
+        points:
+          type: integer
+        amountMwk:
+          type: ["number", "null"]
+        description:
+          type: string
+        offerName:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [completed, pending, failed]
+        createdAt:
+          type: string
+          format: date-time
+
+    OfferwallToken:
+      type: object
+      required: [embedUrl, userId]
+      properties:
+        embedUrl:
+          type: string
+        userId:
+          type: string
+
+    WithdrawalInput:
+      type: object
+      required: [points, provider, phoneNumber]
+      properties:
+        points:
+          type: integer
+          minimum: 5000
+          description: Points to redeem (minimum 5000 = 50 MWK)
+        provider:
+          type: string
+          enum: [airtel, tnm]
+          description: Mobile money provider
+        phoneNumber:
+          type: string
+          description: Mobile money number
+
+    Withdrawal:
+      type: object
+      required: [id, points, amountMwk, provider, phoneNumber, status, createdAt]
+      properties:
+        id:
+          type: string
+        points:
+          type: integer
+        amountMwk:
+          type: number
+        provider:
+          type: string
+          enum: [airtel, tnm]
+        phoneNumber:
+          type: string
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+        paychanguRef:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    LeaderboardEntry:
+      type: object
+      required: [rank, username, totalEarned, offersCompleted]
+      properties:
+        rank:
+          type: integer
+        username:
+          type: string
+        totalEarned:
+          type: integer
+        offersCompleted:
+          type: integer
+        avatarUrl:
+          type: ["string", "null"]
