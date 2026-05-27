@@ -3,7 +3,7 @@
   "framework": null,
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "NODE_ENV=production pnpm --filter @workspace/api-server run build:vercel && NODE_ENV=production pnpm --filter @workspace/rewards-app run build",
-  "outputDirectory": "artifacts/rewards-app/dist/public",
+  "outputDirectory": "artifacts/rewards-app/dist",
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/server" },
     { "source": "/rewardsriver/:path*", "destination": "/api/server" },
