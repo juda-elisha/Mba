@@ -4,6 +4,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
 import router from "./routes";
+import rewardsRiverRouter from "./routes/rewardsriver";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
@@ -96,6 +97,10 @@ app.use(
 // Body parsing — limit size to prevent abuse
 app.use(express.json({ limit: "50kb" }));
 app.use(express.urlencoded({ extended: true, limit: "50kb" }));
+
+// RewardsRiver postback — must be at /rewardsriver/postback (no /api prefix)
+// This is the URL format RewardsRiver requires: https://your-app.com/rewardsriver/postback
+app.use("/rewardsriver", rewardsRiverRouter);
 
 app.use("/api", router);
 
