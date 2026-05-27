@@ -6,41 +6,25 @@ import { requireAuth, type AuthenticatedRequest } from "../lib/auth";
 
 const router = Router();
 
-const REWARDSRIVER_APP_ID = process.env["REWARDSRIVER_APP_ID"];
+// placement_id identifies your wall — not a secret, it's in the public embed URL.
+// Falls back to the known value so the wall works even before the env var is set.
+const REWARDSRIVER_PLACEMENT_ID =
+  process.env["REWARDSRIVER_APP_ID"] ?? "6a16384ee007ae6b2d851b73";
 const REWARDSRIVER_SECRET_KEY = process.env["REWARDSRIVER_SECRET_KEY"];
 
-// GET /api/offerwall/token — returns the signed offerwall embed URL
+// GET /api/offerwall/token — returns the embed URL for the user's offerwall
 router.get("/offerwall/token", requireAuth, async (req, res) => {
   const authReq = req as AuthenticatedRequest;
   const userId = authReq.appUser.id;
 
-  if (!REWARDSRIVER_APP_ID || !REWARDSRIVER_SECRET_KEY) {
-    // Return a placeholder when credentials are not yet configured
-    res.json({
-      embedUrl: `https://rewardsriver.com/offerwall?app_id=CONFIGURE_ME&user_id=${encodeURIComponent(userId)}&sig=CONFIGURE_ME`,
-      userId,
-    });
-    return;
-  }
-
-  // Build signed URL for RewardsRiver offerwall
-  // The HMAC signature proves this user is authentic
-  const timestamp = Math.floor(Date.now() / 1000).toString();
-  const sigPayload = `${REWARDSRIVER_APP_ID}:${userId}:${timestamp}`;
-  const sig = crypto
-    .createHmac("sha256", REWARDSRIVER_SECRET_KEY)
-    .update(sigPayload)
-    .digest("hex");
-
+  // Build the wall URL with placement_id and user_id so RewardsRiver
+  // knows which wall to show and can attribute completions to this user
   const params = new URLSearchParams({
-    app_id: REWARDSRIVER_APP_ID,
+    placement_id: REWARDSRIVER_PLACEMENT_ID,
     user_id: userId,
-    timestamp,
-    sig,
   });
 
-  const embedUrl = `https://rewardsriver.com/offerwall?${params.toString()}`;
-
+  const embedUrl = `https://www.rewardsriver.com/wall?${params.toString()}`;
   res.json({ embedUrl, userId });
 });
 
