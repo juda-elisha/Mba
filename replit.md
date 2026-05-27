@@ -61,13 +61,37 @@ Add these in the Secrets panel before going live:
 - `REWARDSRIVER_APP_ID` — RewardsRiver offerwall app ID
 - `REWARDSRIVER_SECRET_KEY` — RewardsRiver offerwall secret (for HMAC verification)
 
+## Deploying to Vercel
+
+A `vercel.json` is at the repo root. Import the repo in Vercel and set these environment variables in the Vercel dashboard before deploying:
+
+| Variable | Value |
+|---|---|
+| `DATABASE_URL` | Supabase Postgres connection string (Settings → Database → Connection string → URI) |
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_ANON_KEY` | Supabase anon/public key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |
+| `PAYCHANGU_SECRET_KEY` | PayChangu merchant secret key |
+| `REWARDSRIVER_APP_ID` | RewardsRiver offerwall app ID |
+| `REWARDSRIVER_SECRET_KEY` | RewardsRiver offerwall secret |
+| `SESSION_SECRET` | Any long random string |
+| `ALLOWED_ORIGINS` | Your Vercel production domain, e.g. `https://rewardsriver.cash` |
+
+After adding env vars, push the DB schema to Supabase Postgres:
+```
+DATABASE_URL=<supabase-postgres-url> pnpm --filter @workspace/db run push
+```
+
+Then deploy via Vercel dashboard or `vercel deploy`.
+
 ## Gotchas
 
-- The API server will throw on startup if `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are not set. Add them in Secrets first.
+- The API server requires `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to start.
 - RewardsRiver postback URL to configure: `https://<your-domain>/api/offerwall/postback`
 - PayChangu disbursement endpoint used: `POST https://api.paychangu.com/disbursement`
 - Run `pnpm --filter @workspace/db run push` after any schema changes in `lib/db/src/schema/`
 - Always run `pnpm run typecheck:libs` after schema changes before typechecking `api-server`
+- `ALLOWED_ORIGINS` on Vercel: set it to your production domain so CORS lets the frontend talk to the API. Vercel's preview URLs are auto-allowed via `VERCEL_URL`.
 
 ## User preferences
 

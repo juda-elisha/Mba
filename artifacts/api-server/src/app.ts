@@ -8,6 +8,9 @@ import { logger } from "./lib/logger";
 
 const app: Express = express();
 
+// Trust the reverse proxy (Replit, Vercel, etc.) so rate limiting uses the real client IP
+app.set("trust proxy", 1);
+
 // Security: set secure HTTP headers
 app.use(
   helmet({
@@ -38,14 +41,34 @@ app.use(globalLimiter);
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", authLimiter);
 
-// CORS — restrict to same origin in production
-const allowedOrigins = process.env["NODE_ENV"] === "production"
-  ? (process.env["REPLIT_DOMAINS"] ?? "").split(",").map((d) => `https://${d.trim()}`)
-  : ["*"];
+// CORS — restrict to known origins in production, allow all in dev
+function buildAllowedOrigins(): string[] | null {
+  if (process.env["NODE_ENV"] !== "production") return null; // null = allow all in dev
+
+  const origins: string[] = [];
+
+  // Replit deployment domains
+  const replitDomains = (process.env["REPLIT_DOMAINS"] ?? "")
+    .split(",")
+    .map((d) => d.trim())
+    .filter(Boolean);
+  for (const d of replitDomains) origins.push(`https://${d}`);
+
+  // Vercel deployment domains (VERCEL_URL is the auto-assigned preview URL)
+  if (process.env["VERCEL_URL"]) origins.push(`https://${process.env["VERCEL_URL"]}`);
+
+  // Custom domain(s) via env var — comma-separated full URLs, e.g. https://myapp.com
+  const custom = (process.env["ALLOWED_ORIGINS"] ?? "").split(",").map((o) => o.trim()).filter(Boolean);
+  origins.push(...custom);
+
+  return origins.length > 0 ? origins : null; // null falls back to allow-all
+}
+
+const allowedOrigins = buildAllowedOrigins();
 
 app.use(
   cors({
-    origin: allowedOrigins.includes("*") ? "*" : allowedOrigins,
+    origin: allowedOrigins ?? "*",
     credentials: true,
   }),
 );

@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { useGetMe, useLogout } from "@workspace/api-client-react";
+import { useGetMe, useLogout, getGetMeQueryKey } from "@workspace/api-client-react";
 import { Coins, LayoutDashboard, Trophy, Receipt, LogOut, Menu, Wallet } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 
@@ -13,7 +13,7 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const { isAuthenticated, logout: clearLocalAuth } = useAuth();
   const [location] = useLocation();
-  const { data: user } = useGetMe({ query: { enabled: isAuthenticated, retry: false } });
+  const { data: user } = useGetMe({ query: { queryKey: getGetMeQueryKey(), enabled: isAuthenticated, retry: false } });
   const logoutMutation = useLogout();
 
   const handleLogout = () => {
