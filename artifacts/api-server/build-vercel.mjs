@@ -3,21 +3,29 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm } from "node:fs/promises";
+import { rm, readdir, unlink } from "node:fs/promises";
 
 globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
-const distDir = path.resolve(artifactDir, "dist-vercel");
+// Output directly into the repo-root api/ directory so all CJS files are
+// co-located with api/server.js — this makes Vercel's includeFiles glob trivial.
+const apiDir = path.resolve(artifactDir, "../../api");
 
-await rm(distDir, { recursive: true, force: true });
+// Clean up any previously-generated .cjs files (but not server.js itself).
+const existing = await readdir(apiDir).catch(() => []);
+await Promise.all(
+  existing
+    .filter((f) => f.endsWith(".cjs"))
+    .map((f) => unlink(path.join(apiDir, f)))
+);
 
 await esbuild({
   entryPoints: [path.resolve(artifactDir, "src/vercel.ts")],
   platform: "node",
   bundle: true,
   format: "cjs",
-  outdir: distDir,
+  outdir: apiDir,
   outExtension: { ".js": ".cjs" },
   logLevel: "info",
   external: [
