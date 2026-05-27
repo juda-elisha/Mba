@@ -2,17 +2,16 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
-import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm, readdir, unlink } from "node:fs/promises";
+import { readdir, unlink } from "node:fs/promises";
 
+// Some packages use `require` at module load time.
 globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
-// Output directly into the repo-root api/ directory so all CJS files are
-// co-located with api/server.js — this makes Vercel's includeFiles glob trivial.
+// Output into the repo-root api/ directory, co-located with api/server.js.
 const apiDir = path.resolve(artifactDir, "../../api");
 
-// Clean up any previously-generated .cjs files (but not server.js itself).
+// Remove any previously generated .cjs files (leave server.js alone).
 const existing = await readdir(apiDir).catch(() => []);
 await Promise.all(
   existing
@@ -20,13 +19,14 @@ await Promise.all(
     .map((f) => unlink(path.join(apiDir, f)))
 );
 
+// No esbuildPluginPino needed: logger.ts passes process.stdout in production,
+// bypassing pino's thread-stream worker entirely.
 await esbuild({
   entryPoints: [path.resolve(artifactDir, "src/vercel.ts")],
   platform: "node",
   bundle: true,
   format: "cjs",
-  outdir: apiDir,
-  outExtension: { ".js": ".cjs" },
+  outfile: path.join(apiDir, "vercel.cjs"),
   logLevel: "info",
   external: [
     "*.node",
@@ -101,9 +101,6 @@ await esbuild({
     "puppeteer",
     "puppeteer-core",
     "electron",
-  ],
-  plugins: [
-    esbuildPluginPino({ transports: ["pino-pretty"] }),
   ],
 }).catch((err) => {
   console.error(err);

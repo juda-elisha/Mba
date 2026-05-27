@@ -29895,17 +29895,7 @@ var require_multistream = __commonJS({
 // ../../node_modules/.pnpm/pino@9.14.0/node_modules/pino/pino.js
 var require_pino = __commonJS({
   "../../node_modules/.pnpm/pino@9.14.0/node_modules/pino/pino.js"(exports2, module2) {
-    function pinoBundlerAbsolutePath(p) {
-      try {
-        const path = require("path");
-        const outputDir = "/home/runner/workspace/api";
-        return path.resolve(outputDir, p.replace(/^\.\//, ""));
-      } catch (e) {
-        const f = new Function("p", "return new URL(p, import.meta.url).pathname");
-        return f(p);
-      }
-    }
-    globalThis.__bundlerPathsOverrides = { ...globalThis.__bundlerPathsOverrides || {}, "thread-stream-worker": pinoBundlerAbsolutePath("./thread-stream-worker.cjs"), "pino-worker": pinoBundlerAbsolutePath("./pino-worker.cjs"), "pino/file": pinoBundlerAbsolutePath("./pino-file.cjs"), "pino-pretty": pinoBundlerAbsolutePath("./pino-pretty.cjs") };
+    "use strict";
     var os = require("node:os");
     var stdSerializers = require_pino_std_serializers();
     var caller = require_caller();
@@ -81844,20 +81834,26 @@ var rewardsriver_default = router8;
 // src/lib/logger.ts
 var import_pino = __toESM(require_pino(), 1);
 var isProduction = process.env.NODE_ENV === "production";
-var logger = (0, import_pino.default)({
-  level: process.env.LOG_LEVEL ?? "info",
-  redact: [
-    "req.headers.authorization",
-    "req.headers.cookie",
-    "res.headers['set-cookie']"
-  ],
-  ...isProduction ? {} : {
-    transport: {
-      target: "pino-pretty",
-      options: { colorize: true }
+var logger = (0, import_pino.default)(
+  {
+    level: process.env.LOG_LEVEL ?? "info",
+    redact: [
+      "req.headers.authorization",
+      "req.headers.cookie",
+      "res.headers['set-cookie']"
+    ],
+    ...isProduction ? {} : {
+      transport: {
+        target: "pino-pretty",
+        options: { colorize: true }
+      }
     }
-  }
-});
+  },
+  // In production pass process.stdout directly so pino skips thread-stream
+  // entirely — no worker files are spawned, which is essential for Vercel
+  // serverless where dynamic worker requires break after ncc re-bundling.
+  isProduction ? process.stdout : void 0
+);
 
 // src/app.ts
 var app = (0, import_express9.default)();
